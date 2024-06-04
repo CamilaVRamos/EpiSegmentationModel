@@ -1,4 +1,4 @@
-from matplotlib.colors import ListedColormap
+"""from matplotlib.colors import ListedColormap
 import numpy as np
 import os
 from pathlib import Path 
@@ -13,8 +13,10 @@ from model import UNet
 from tqdm import tqdm
 import tifffile
 from data_processing import SDTDataset, GradientDataset
+
+from functools import partial"""
 import sys
-from functools import partial
+import argparse
 sys.path.append('.')
 
 def salt_and_pepper_noise(image, amount=0.05):
@@ -218,33 +220,34 @@ def main():
     watershed_scale = 5  # scale over which to calculate the distance transform
 
     print("Loading data ...")
-    """
-    train_data = SDTDataset(transform=transform, img_transform=img_transforms, train=True, ignore_background=ignore_background, 
+
+    train_data = SDTDataset(root_dir=parser.rootdir, transform=transform, img_transform=img_transforms, train=True, ignore_background=ignore_background, 
                             center_crop=center_crop, pad=pad, watershed_scale=watershed_scale)
-    train_loader = DataLoader(train_data, batch_size=10, shuffle=True, num_workers=8)
+    train_loader = DataLoader(parser.rootdir, train_data, batch_size=10, shuffle=True, num_workers=8)
     val_data = SDTDataset(transform=None, img_transform=None, train=False, return_mask=False, ignore_background=False, 
                           center_crop=center_crop, pad=pad, mean=train_data.mean, std=train_data.std, watershed_scale=watershed_scale)
     val_loader = DataLoader(val_data, batch_size=10)
-    """
 
+    """
     train_data = GradientDataset(transform=transform, img_transform=img_transforms, train=True, ignore_background=ignore_background, 
                             center_crop=center_crop, pad=pad)
     train_loader = DataLoader(train_data, batch_size=5, shuffle=True, num_workers=8)
     val_data = GradientDataset(transform=None, img_transform=None, train=False, ignore_background=False, 
                           center_crop=center_crop, pad=pad, mean=train_data.mean, std=train_data.std)
     val_loader = DataLoader(val_data, batch_size=5)
+    """
 
     print(len(train_loader), len(val_loader))
     # Initialize the model.
     unet = UNet(
-        depth=4,
-        in_channels=1,
-        out_channels=1,
-        final_activation="Sigmoid",
-        num_fmaps=16,
-        fmap_inc_factor=2,
+        depth=parser.depth,
+        in_channels=parser.inCh,
+        out_channels=parser.outCh,
+        final_activation="Tanh",
+        num_fmaps=parser.num_fmaps,
+        fmap_inc_factor=parser.fmap_inc_factor,
         downsample_factor=2,
-        padding="same",
+        padding=parser.padding,
         upsample_mode="nearest",
     )
 
@@ -264,9 +267,9 @@ def main():
             epoch,
             log_interval=10,
             device=device,
-            tb_logger=writer,
-            ignore_background=ignore_background
+            tb_logger=writer
         )
+        #TODO I think this is wrong, it is calculating the loss using the validation dataset?
         val_loss = validate(unet, 
                             val_loader,
                             loss,
@@ -300,4 +303,19 @@ def main():
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    
+    parser.add_argument("-rootdir", type = str, required = True, dest = "rootdir", help = "Full path to data folder. This data folder must contain two folders: one named 'train', containing the data to train on, and one named 'validate', to validate the model. Each of these folders must contain two additional folders in them: one folder named 'img', containing the raw data to train on, and one folder named 'mask', containing the segmented images. Ensure the raw images and the segmented outputs have the exact same name.")
+
+    parser.add_argument("-depth", default=4, type=int, dest = "depth", help="Unet parameter: Depth of the Unet (integer). Default = 4.")
+
+    parser.add_argument("-inCh", default = 1, type = int, dest = "inCh", help = "Unet parameter: Number of channels in the input raw images (interger). Default = 1.")
+
+    parser.add_argument("-outCh", default = 1, type = int, dest = "outCh", help = "Unet parameter: Number of channels in the expected output images. Default = 1.")
+
+    parser.add_argument("-fmaps", default = 64, type = int, choices = [8, 16, 32, 64], dest = "num_fmaps", help = "Unet parameter: Number of feature maps. Default = 64")
+
+    parser.add_argument("-inc", default = 2, type = int, dest = "fmap_inc_factor", help = "Unet parameter: Increment to the number of feature maps per layer of the Unet. Default = 2")
+
+    parser.add_argument("-pad", default = "same", choices=["same", "valid"], dest = "padding", help = "Unet parameter: Padding used during convolution. Default = 'same")
     main()
