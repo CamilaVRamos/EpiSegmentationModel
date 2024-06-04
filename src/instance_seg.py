@@ -1,4 +1,4 @@
-"""from matplotlib.colors import ListedColormap
+from matplotlib.colors import ListedColormap
 import numpy as np
 import os
 from pathlib import Path 
@@ -13,9 +13,8 @@ from model import UNet
 from tqdm import tqdm
 import tifffile
 from data_processing import SDTDataset, GradientDataset
-
-from functools import partial"""
 import sys
+from functools import partial
 import argparse
 sys.path.append('.')
 
@@ -213,18 +212,16 @@ def main():
         ]
     )
     img_transforms = None
-
-    ignore_background = False  # whether to ignore non-segmented cells
     center_crop = True  # whether to do a center crop
     pad = 256  # min size in either dimension, will pad smaller images up to this size
     watershed_scale = 5  # scale over which to calculate the distance transform
 
     print("Loading data ...")
 
-    train_data = SDTDataset(root_dir=parser.rootdir, transform=transform, img_transform=img_transforms, train=True, ignore_background=ignore_background, 
+    train_data = SDTDataset(root_dir=user_input.rootdir, transform=transform, img_transform=img_transforms, train=True, ignore_background=ignore_background, 
                             center_crop=center_crop, pad=pad, watershed_scale=watershed_scale)
-    train_loader = DataLoader(parser.rootdir, train_data, batch_size=10, shuffle=True, num_workers=8)
-    val_data = SDTDataset(transform=None, img_transform=None, train=False, return_mask=False, ignore_background=False, 
+    train_loader = DataLoader(train_data, batch_size=10, shuffle=True, num_workers=8)
+    val_data = SDTDataset(root_dir=user_input.rootdir, transform=None, img_transform=None, train=False, return_mask=False, ignore_background=False, 
                           center_crop=center_crop, pad=pad, mean=train_data.mean, std=train_data.std, watershed_scale=watershed_scale)
     val_loader = DataLoader(val_data, batch_size=10)
 
@@ -240,14 +237,14 @@ def main():
     print(len(train_loader), len(val_loader))
     # Initialize the model.
     unet = UNet(
-        depth=parser.depth,
-        in_channels=parser.inCh,
-        out_channels=parser.outCh,
+        depth=user_input.depth,
+        in_channels=user_input.inCh,
+        out_channels=user_input.outCh,
         final_activation="Tanh",
-        num_fmaps=parser.num_fmaps,
-        fmap_inc_factor=parser.fmap_inc_factor,
+        num_fmaps=user_input.num_fmaps,
+        fmap_inc_factor=user_input.fmap_inc_factor,
         downsample_factor=2,
-        padding=parser.padding,
+        padding=user_input.padding,
         upsample_mode="nearest",
     )
 
@@ -305,17 +302,22 @@ def main():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     
-    parser.add_argument("-rootdir", type = str, required = True, dest = "rootdir", help = "Full path to data folder. This data folder must contain two folders: one named 'train', containing the data to train on, and one named 'validate', to validate the model. Each of these folders must contain two additional folders in them: one folder named 'img', containing the raw data to train on, and one folder named 'mask', containing the segmented images. Ensure the raw images and the segmented outputs have the exact same name.")
+    parser.add_argument("-rootdir", "--rootdir", type = str, required = True, help = "Full path to data folder. This data folder must contain two folders: one named 'train', containing the data to train on, and one named 'validate', to validate the model. Each of these folders must contain two additional folders in them: one folder named 'img', containing the raw data to train on, and one folder named 'mask', containing the segmented images. Ensure the raw images and the segmented outputs have the exact same name.")
 
-    parser.add_argument("-depth", default=4, type=int, dest = "depth", help="Unet parameter: Depth of the Unet (integer). Default = 4.")
+    parser.add_argument("-depth", "--depth", default=4, type=int, help="Unet parameter: Depth of the Unet (integer). Default = 4.")
 
-    parser.add_argument("-inCh", default = 1, type = int, dest = "inCh", help = "Unet parameter: Number of channels in the input raw images (interger). Default = 1.")
+    parser.add_argument("-inCh", "--inCh", default = 1, type = int,  help = "Unet parameter: Number of channels in the input raw images (interger). Default = 1.")
 
-    parser.add_argument("-outCh", default = 1, type = int, dest = "outCh", help = "Unet parameter: Number of channels in the expected output images. Default = 1.")
+    parser.add_argument("-outCh", "--outCh", default = 1, type = int, help = "Unet parameter: Number of channels in the expected output images. Default = 1.")
 
-    parser.add_argument("-fmaps", default = 64, type = int, choices = [8, 16, 32, 64], dest = "num_fmaps", help = "Unet parameter: Number of feature maps. Default = 64")
+    parser.add_argument("-fmaps", "--num_fmaps", default = 64, type = int, choices = [8, 16, 32, 64], help = "Unet parameter: Number of feature maps. Default = 64")
 
-    parser.add_argument("-inc", default = 2, type = int, dest = "fmap_inc_factor", help = "Unet parameter: Increment to the number of feature maps per layer of the Unet. Default = 2")
+    parser.add_argument("-inc", "--fmap_inc_factor", default = 2, type = int, help = "Unet parameter: Increment to the number of feature maps per layer of the Unet. Default = 2")
 
-    parser.add_argument("-pad", default = "same", choices=["same", "valid"], dest = "padding", help = "Unet parameter: Padding used during convolution. Default = 'same")
+    parser.add_argument("-pad", "--padding", default = "same", choices=["same", "valid"], help = "Unet parameter: Padding used during convolution. Default = 'same")
+
+
+    user_input = parser.parse_args()
+    print(user_input)
+
     main()
