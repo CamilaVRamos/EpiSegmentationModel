@@ -218,10 +218,10 @@ def main():
 
     print("Loading data ...")
 
-    train_data = SDTDataset(root_dir=user_input.rootdir, transform=transform, img_transform=img_transforms, train=True, ignore_background=ignore_background, 
+    train_data = SDTDataset(root_dir=user_rootdir, transform=transform, img_transform=img_transforms, train=True, ignore_background=ignore_background, 
                             center_crop=center_crop, pad=pad, watershed_scale=watershed_scale)
     train_loader = DataLoader(train_data, batch_size=10, shuffle=True, num_workers=8)
-    val_data = SDTDataset(root_dir=user_input.rootdir, transform=None, img_transform=None, train=False, return_mask=False, ignore_background=False, 
+    val_data = SDTDataset(root_dir=user_rootdir, transform=None, img_transform=None, train=False, return_mask=False, ignore_background=False, 
                           center_crop=center_crop, pad=pad, mean=train_data.mean, std=train_data.std, watershed_scale=watershed_scale)
     val_loader = DataLoader(val_data, batch_size=10)
 
@@ -237,14 +237,14 @@ def main():
     print(len(train_loader), len(val_loader))
     # Initialize the model.
     unet = UNet(
-        depth=user_input.depth,
-        in_channels=user_input.inCh,
-        out_channels=user_input.outCh,
+        depth=user_depth,
+        in_channels=user_inCh,
+        out_channels=user_outCh,
         final_activation="Tanh",
-        num_fmaps=user_input.num_fmaps,
-        fmap_inc_factor=user_input.fmap_inc_factor,
+        num_fmaps=user_num_fmaps,
+        fmap_inc_factor=user_fmap_inc_factor,
         downsample_factor=2,
-        padding=user_input.padding,
+        padding=user_padding,
         upsample_mode="nearest",
     )
 
@@ -255,7 +255,7 @@ def main():
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=5, min_lr=1e-8)
 
     early_stopper = EarlyStopper(patience=20)
-    for epoch in tqdm(range(200)):
+    for epoch in tqdm(range(user_epochs)):
         train(
             unet,
             train_loader,
@@ -300,24 +300,27 @@ def main():
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    
-    parser.add_argument("-rootdir", "--rootdir", type = str, required = True, help = "Full path to data folder. This data folder must contain two folders: one named 'train', containing the data to train on, and one named 'validate', to validate the model. Each of these folders must contain two additional folders in them: one folder named 'img', containing the raw data to train on, and one folder named 'mask', containing the segmented images. Ensure the raw images and the segmented outputs have the exact same name.")
 
-    parser.add_argument("-depth", "--depth", default=4, type=int, help="Unet parameter: Depth of the Unet (integer). Default = 4.")
+    config = {}
 
-    parser.add_argument("-inCh", "--inCh", default = 1, type = int,  help = "Unet parameter: Number of channels in the input raw images (interger). Default = 1.")
+    # Open the file in read mode
+    with open("./config.txt", 'r') as file:
+    # Read each line in the file
+        for line in file:
+            # Strip any leading/trailing whitespace and split the line into variable name and value
+            name, value = line.strip().split('=')
+            # Store the variable name and value in the dictionary
+            config[name.strip()] = (value.strip())  
 
-    parser.add_argument("-outCh", "--outCh", default = 1, type = int, help = "Unet parameter: Number of channels in the expected output images. Default = 1.")
+    # Access the values by variable names
+    user_rootdir = config['rootdir'] # Full path to data folder. This data folder must contain two folders: one named 'train', containing the data to train on, and one named 'validate', to validate the model. Each of these folders must contain two additional folders in them: one folder named 'img', containing the raw data to train on, and one folder named 'mask', containing the segmented images. Ensure the raw images and the segmented outputs have the exact same name.
+    user_depth = int(config['depth']) #UNet parameter: Depth of the Unet (integer)
+    user_inCh = int(config['inCh']) #UNet parameter: Number of channels in the input raw images
+    user_outCh = int(config['outCh']) #Unet parameter: Number of channels in the expected output
+    user_num_fmaps = int(config['num_fmaps'])  #UNet parameter: Number of feature maps
+    user_fmap_inc_factor = int(config['fmap_inc_factor']) #UNet parameter: Increment to the number of feature maps per convolutional layer
+    user_padding = config['padding'] #UNet parameter. Padding used during convolution. Should be "same" or "valid"
+    user_epochs = int(config['epochs']) #UNet hyperparameter: number of epochs. TODO: missing input for this
 
-    parser.add_argument("-fmaps", "--num_fmaps", default = 64, type = int, choices = [8, 16, 32, 64], help = "Unet parameter: Number of feature maps. Default = 64")
-
-    parser.add_argument("-inc", "--fmap_inc_factor", default = 2, type = int, help = "Unet parameter: Increment to the number of feature maps per layer of the Unet. Default = 2")
-
-    parser.add_argument("-pad", "--padding", default = "same", choices=["same", "valid"], help = "Unet parameter: Padding used during convolution. Default = 'same")
-
-
-    user_input = parser.parse_args()
-    print(user_input)
 
     main()
