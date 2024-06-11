@@ -200,7 +200,7 @@ def main():
             transforms.RandomHorizontalFlip(0.5),
             transforms.RandomVerticalFlip(0.5),  
             transforms.RandomRotation([90,90]),
-            transforms.RandomCrop(256)   
+            transforms.RandomCrop(user_crop_size)   
             ]
     )
 
@@ -213,26 +213,17 @@ def main():
     )
     img_transforms = None
     center_crop = True  # whether to do a center crop
-    pad = 256  # min size in either dimension, will pad smaller images up to this size
+    pad = user_crop_size  # min size in either dimension, will pad smaller images up to this size
     watershed_scale = 5  # scale over which to calculate the distance transform
 
     print("Loading data ...")
 
-    train_data = SDTDataset(root_dir=user_rootdir, transform=transform, img_transform=img_transforms, train=True, ignore_background=ignore_background, 
+    train_data = SDTDataset(root_dir=user_rootdir, transform=transform, img_transform=img_transforms, train=True, 
                             center_crop=center_crop, pad=pad, watershed_scale=watershed_scale)
-    train_loader = DataLoader(train_data, batch_size=10, shuffle=True, num_workers=8)
-    val_data = SDTDataset(root_dir=user_rootdir, transform=None, img_transform=None, train=False, return_mask=False, ignore_background=False, 
+    train_loader = DataLoader(train_data, batch_size=user_batch_size, shuffle=True, num_workers=8)
+    val_data = SDTDataset(root_dir=user_rootdir, transform=None, img_transform=None, train=False, return_mask=False, 
                           center_crop=center_crop, pad=pad, mean=train_data.mean, std=train_data.std, watershed_scale=watershed_scale)
-    val_loader = DataLoader(val_data, batch_size=10)
-
-    """
-    train_data = GradientDataset(transform=transform, img_transform=img_transforms, train=True, ignore_background=ignore_background, 
-                            center_crop=center_crop, pad=pad)
-    train_loader = DataLoader(train_data, batch_size=5, shuffle=True, num_workers=8)
-    val_data = GradientDataset(transform=None, img_transform=None, train=False, ignore_background=False, 
-                          center_crop=center_crop, pad=pad, mean=train_data.mean, std=train_data.std)
-    val_loader = DataLoader(val_data, batch_size=5)
-    """
+    val_loader = DataLoader(val_data, batch_size=user_batch_size)
 
     print(len(train_loader), len(val_loader))
     # Initialize the model.
@@ -320,7 +311,9 @@ if __name__ == "__main__":
     user_num_fmaps = int(config['num_fmaps'])  #UNet parameter: Number of feature maps
     user_fmap_inc_factor = int(config['fmap_inc_factor']) #UNet parameter: Increment to the number of feature maps per convolutional layer
     user_padding = config['padding'] #UNet parameter. Padding used during convolution. Should be "same" or "valid"
-    user_epochs = int(config['epochs']) #UNet hyperparameter: number of epochs. TODO: missing input for this
+    user_epochs = int(config['epochs']) #UNet hyperparameter: number of epochs. 
+    user_batch_size = int(config['batch_size']) #UNet hyperparameter: batch size.
+    user_crop_size = int(config['crop_size'])
 
 
     main()
