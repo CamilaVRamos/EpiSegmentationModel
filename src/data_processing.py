@@ -51,9 +51,9 @@ class SDTDataset(Dataset):
         
         # the directory with all the training samples
         if train:
-            self.root_dir = root_dir + 'train/'
+            self.root_dir = root_dir + '/train/'
         else:
-            self.root_dir = root_dir + 'validate/'
+            self.root_dir = root_dir + '/validate/'
         
         #the name of the raw images is different from the name of the mask names so we temporarilly store this info in separate variables
         self.list_images = os.listdir(self.root_dir+"img/") 
@@ -96,9 +96,6 @@ class SDTDataset(Dataset):
             self.loaded_imgs[sample_ind] = inp_transforms(image)
             self.loaded_masks[sample_ind] = mask
             
-            if self.ignore_background:
-                self.ignore_masks[sample_ind] = ignore_mask
-
         #if you want to retrieve mean and sd from the train dataset
         if mean is None or std is None:
             img_array = np.concatenate([this_img.numpy().flatten() for this_img in self.loaded_imgs])
