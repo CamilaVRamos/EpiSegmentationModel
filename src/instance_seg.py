@@ -239,7 +239,7 @@ def main():
     )
 
     learning_rate = 1e-4
-    loss = torch.nn.BCELoss()
+    loss = torch.nn.MSELoss()
     writer = SummaryWriter()
     optimizer = torch.optim.Adam(unet.parameters(), lr=learning_rate)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=5, min_lr=1e-8)
