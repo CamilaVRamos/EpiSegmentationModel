@@ -12,7 +12,7 @@ from torchvision.transforms import v2 as transformsv2
 from model import UNet
 from tqdm import tqdm
 import tifffile
-from data_processing import SDTDataset, GradientDataset
+from data_processing import SDTDataset
 import sys
 from functools import partial
 import argparse
@@ -212,17 +212,16 @@ def main():
         ]
     )
     img_transforms = None
-    center_crop = True  # whether to do a center crop
     pad = user_crop_size  # min size in either dimension, will pad smaller images up to this size
     watershed_scale = 5  # scale over which to calculate the distance transform
 
     print("Loading data ...")
 
     train_data = SDTDataset(root_dir=user_rootdir, transform=transform, img_transform=img_transforms, train=True, 
-                            center_crop=center_crop, pad=pad, watershed_scale=watershed_scale)
+                            watershed_scale=watershed_scale)
     train_loader = DataLoader(train_data, batch_size=user_batch_size, shuffle=True, num_workers=8)
     val_data = SDTDataset(root_dir=user_rootdir, transform=None, img_transform=None, train=False, return_mask=False, 
-                          center_crop=center_crop, pad=pad, mean=train_data.mean, std=train_data.std, watershed_scale=watershed_scale)
+                          mean=train_data.mean, std=train_data.std, watershed_scale=watershed_scale)
     val_loader = DataLoader(val_data, batch_size=user_batch_size)
 
     print(len(train_loader), len(val_loader))
