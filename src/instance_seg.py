@@ -61,10 +61,9 @@ def train(
     loss_function,
     epoch,
     log_interval=100,
-    log_image_interval=20,
+    log_image_interval=10,
     tb_logger=None,
-    device=None,
-    ignore_background=False,
+    device=None
 ):
     if device is None:
         # You can pass in a device or we will default to using
@@ -83,12 +82,8 @@ def train(
 
     # iterate over the batches of this epoch
     for batch_id, batch in enumerate(loader):
-        if ignore_background:
-            x, y, ignore_mask = batch[0], batch[1], batch[2]
-            x, y, ignore_mask = x.to(device), y.to(device), ignore_mask.to(device)
-        else:
-            x, y = batch[0], batch[1]
-            x, y = x.to(device), y.to(device)
+        x, y = batch[0], batch[1]
+        x, y = x.to(device), y.to(device)
 
         # zero the gradients for this iteration
         optimizer.zero_grad()
@@ -99,11 +94,6 @@ def train(
             y = crop(y, prediction)
         if y.dtype != prediction.dtype:
             y = y.type(prediction.dtype)
-
-        # mask out areas that should be ignored in gt and prediction by multiplying by ignore mask
-        if ignore_background:
-            y = y * ignore_mask
-            prediction = prediction * ignore_mask
 
         loss = loss_function(prediction, y)
 
