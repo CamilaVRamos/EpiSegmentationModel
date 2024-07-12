@@ -210,7 +210,7 @@ def main():
     train_data = SDTDataset(root_dir=user_rootdir, transform=transform, img_transform=img_transforms, train=True, 
                             watershed_scale=watershed_scale)
     train_loader = DataLoader(train_data, batch_size=user_batch_size, shuffle=True, num_workers=8)
-    val_data = SDTDataset(root_dir=user_rootdir, transform=None, img_transform=None, train=False, return_mask=False, 
+    val_data = SDTDataset(root_dir=user_rootdir, transform=transform, img_transform=None, train=False, return_mask=False, 
                           mean=train_data.mean, std=train_data.std, watershed_scale=watershed_scale)
     val_loader = DataLoader(val_data, batch_size=user_batch_size)
 
